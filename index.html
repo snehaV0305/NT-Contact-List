@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Book — Event Contacts</title>
+<style>
+  :root{
+    --bg: #12161c;
+    --surface: #1b222a;
+    --surface-alt: #222b34;
+    --line: #2d3742;
+    --ink: #edece6;
+    --muted: #8c98a3;
+    --accent: #e7a33e;
+    --accent-ink: #1b1204;
+    --teal: #4fa490;
+    --danger: #e2604f;
+    --radius: 10px;
+    font-size: 16px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3,.serif{ font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif; }
+  button{ font-family: inherit; cursor:pointer; }
+  input, select, textarea{ font-family: inherit; }
+
+  .app{ display:flex; min-height:100vh; }
+
+  /* Sidebar */
+  .rail{
+    width: 260px;
+    flex-shrink:0;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    padding: 28px 22px;
+    display:flex;
+    flex-direction:column;
+    gap: 28px;
+  }
+  .brand{ display:flex; flex-direction:column; gap:2px; }
+  .brand h1{ font-size: 1.5rem; font-weight:600; margin:0; letter-spacing:-0.01em; }
+  .brand span{ color: var(--muted); font-size: 0.82rem; }
+
+  .stat-grid{ display:flex; flex-direction:column; gap:10px; }
+  .stat{
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .stat .n{ font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; }
+  .stat .l{ color: var(--muted); font-size: 0.78rem; }
+  .stat.warn .n{ color: var(--danger); }
+
+  .filter-block{ display:flex; flex-direction:column; gap:12px; }
+  .filter-block label{ font-size:0.75rem; color:var(--muted); display:block; margin-bottom:5px; }
+  .filter-block select, .filter-block input{
+    width:100%;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+  }
+
+  .rail-footer{ margin-top:auto; color:var(--muted); font-size:0.72rem; line-height:1.5; }
+
+  /* Main */
+  .main{ flex:1; padding: 28px 32px; overflow-y:auto; }
+  .toolbar{
+    display:flex;
+    gap: 12px;
+    align-items:center;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .search-wrap{ flex:1; min-width:200px; position:relative; }
+  .search-wrap input{
+    width:100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 11px 14px 11px 36px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+  }
+  .search-wrap::before{
+    content:'';
+    position:absolute; left:13px; top:50%; transform:translateY(-50%);
+    width:14px; height:14px;
+    border: 2px solid var(--muted);
+    border-radius:50%;
+  }
+  .search-wrap::after{
+    content:'';
+    position:absolute; left:22px; top:59%;
+    width:7px; height:2px;
+    background: var(--muted);
+    transform: rotate(45deg);
+  }
+
+  .btn{
+    border-radius: 999px;
+    padding: 11px 18px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.88rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .btn:hover{ background: var(--surface-alt); }
+  .btn:active{ transform: scale(0.97); }
+  .btn.primary{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight:600; }
+  .btn.primary:hover{ filter: brightness(1.05); }
+  .btn.ghost{ background:transparent; }
+  .btn.danger-outline{ border-color: var(--danger); color: var(--danger); background:transparent; }
+  .btn.small{ padding: 7px 13px; font-size:0.8rem; }
+
+  .empty{
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 60px 20px;
+    text-align:center;
+    color: var(--muted);
+  }
+  .empty h3{ color: var(--ink); margin-bottom:6px; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 14px;
+  }
+
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 17px;
+    position:relative;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    transition: border-color 0.15s ease;
+  }
+  .card:hover{ border-color: #414f5c; }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .card-top h3{ font-size: 1.05rem; margin:0; font-weight:600; }
+  .card-role{ color: var(--muted); font-size:0.82rem; margin-top:2px; }
+  .badge{
+    font-size: 0.68rem;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--surface-alt);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    white-space:nowrap;
+  }
+  .badge.due{ background: rgba(226,96,79,0.15); color: var(--danger); border-color: rgba(226,96,79,0.4); }
+  .badge.soon{ background: rgba(231,163,62,0.15); color: var(--accent); border-color: rgba(231,163,62,0.4); }
+  .badge.later{ background: rgba(79,164,144,0.15); color: var(--teal); border-color: rgba(79,164,144,0.4); }
+  .card-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; }
+  .card-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:0.78rem; color:var(--muted); }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background: rgba(8,10,13,0.72);
+    display:flex; align-items:center; justify-content:center;
+    padding: 24px; z-index: 50;
+  }
+  .hidden{ display:none !important; }
+  .modal{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    width: 100%; max-width: 620px;
+    max-height: 88vh;
+    overflow-y:auto;
+    padding: 26px 28px 28px;
+  }
+  .modal-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+  .modal-head h2{ margin:0; font-size:1.35rem; }
+  .close-x{ background:none; border:none; color:var(--muted); font-size:1.3rem; line-height:1; padding:4px; }
+  .close-x:hover{ color: var(--ink); }
+
+  .form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field.full{ grid-column: 1 / -1; }
+  .field label{ font-size:0.76rem; color: var(--muted); }
+  .field input, .field select, .field textarea{
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+  }
+  .field textarea{ resize: vertical; min-height:64px; }
+  .form-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+
+  /* Detail view */
+  .detail-head{ display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
+  .detail-head h2{ margin:0 0 3px; }
+  .detail-sub{ color: var(--muted); font-size:0.9rem; }
+  .detail-actions{ display:flex; gap:8px; flex-shrink:0; }
+  .info-grid{
+    display:grid; grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+    margin: 20px 0;
+    padding: 16px;
+    background: var(--surface-alt);
+    border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+  .info-item .l{ font-size:0.72rem; color:var(--muted); margin-bottom:2px; }
+  .info-item .v{ font-size:0.92rem; }
+  .info-item .v:empty::after{ content: '—'; color: var(--muted); }
+  .section-title{ font-size:0.95rem; font-weight:600; margin: 20px 0 10px; display:flex; justify-content:space-between; align-items:center; }
+
+  .call-log{ display:flex; flex-direction:column; gap:10px; }
+  .call-item{
+    border-left: 2px solid var(--teal);
+    padding: 4px 0 4px 14px;
+  }
+  .call-item .date{ font-size:0.78rem; color:var(--teal); font-weight:600; }
+  .call-item .notes{ font-size:0.88rem; margin-top:2px; }
+  .no-calls{ color: var(--muted); font-size:0.85rem; }
+
+  .add-call-form{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  .add-call-form input[type=date]{ background: var(--surface-alt); border:1px solid var(--line); color:var(--ink); padding:9px 10px; border-radius:8px; }
+  .add-call-form textarea{ flex:1; min-width:180px; background: var(--surface-alt); border:1px solid var(--line); color:var(--ink); padding:9px 10px; border-radius:8px; resize:vertical; min-height:38px; }
+
+  /* Scan modal */
+  .scan-drop{
+    border: 1.5px dashed var(--line);
+    border-radius: 12px;
+    padding: 30px;
+    text-align:center;
+    color: var(--muted);
+    position:relative;
+  }
+  .scan-drop input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .scan-preview{ max-width:100%; max-height:220px; border-radius:8px; margin-top:14px; display:block; }
+  .scan-status{ font-size:0.85rem; color: var(--muted); margin-top:10px; min-height:1.2em; }
+  .event-quickset{ display:flex; gap:10px; margin-bottom:16px; }
+  .event-quickset input{ flex:1; background: var(--surface-alt); border:1px solid var(--line); color:var(--ink); padding:9px 12px; border-radius:8px; font-size:0.88rem; }
+
+  ::selection{ background: var(--accent); color: var(--accent-ink); }
+  @media (max-width: 780px){
+    .app{ flex-direction:column; }
+    .rail{ width:100%; flex-direction:row; flex-wrap:wrap; padding:18px 20px; }
+    .rail-footer{ display:none; }
+    .stat-grid{ flex-direction:row; flex:1; }
+    .filter-block{ flex-direction:row; flex-wrap:wrap; width:100%; }
+    .filter-block > div{ flex:1; min-width:140px; }
+    .main{ padding:20px 16px; }
+    .form-grid, .info-grid{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="lockOverlay" style="position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="max-width:340px;width:100%;text-align:center;">
+    <h2 class="serif" style="margin-bottom:6px;">Field Book</h2>
+    <p id="lockLabel" style="color:var(--muted);font-size:0.88rem;margin-bottom:18px;">Set a password to protect this contact book</p>
+    <input type="password" id="lockInput" style="width:100%;background:var(--surface-alt);border:1px solid var(--line);color:var(--ink);padding:11px 14px;border-radius:8px;font-size:0.95rem;margin-bottom:12px;" placeholder="Password">
+    <input type="password" id="lockConfirm" class="hidden" style="width:100%;background:var(--surface-alt);border:1px solid var(--line);color:var(--ink);padding:11px 14px;border-radius:8px;font-size:0.95rem;margin-bottom:12px;" placeholder="Confirm password">
+    <button class="btn primary" id="lockSubmit" style="width:100%;">Continue</button>
+    <div id="lockError" style="color:var(--danger);font-size:0.82rem;margin-top:10px;min-height:1.2em;"></div>
+    <p id="lockReset" class="hidden" style="color:var(--muted);font-size:0.78rem;margin-top:16px;cursor:pointer;text-decoration:underline;">Forgot password? Reset (keeps your contacts)</p>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <h1>Field Book</h1>
+      <span>Contacts from the road</span>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat"><span class="l">Contacts</span><span class="n" id="statTotal">0</span></div>
+      <div class="stat warn"><span class="l">Calls overdue</span><span class="n" id="statOverdue">0</span></div>
+      <div class="stat"><span class="l">Due this week</span><span class="n" id="statWeek">0</span></div>
+    </div>
+
+    <div class="filter-block">
+      <div>
+        <label for="filterEvent">Event</label>
+        <select id="filterEvent"><option value="">All events</option></select>
+      </div>
+      <div>
+        <label for="filterRegion">Region</label>
+        <select id="filterRegion"><option value="">All regions</option></select>
+      </div>
+      <div>
+        <label for="sortBy">Sort by</label>
+        <select id="sortBy">
+          <option value="next">Next call — soonest</option>
+          <option value="recent">Recently added</option>
+          <option value="name">Name A–Z</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rail-footer">Contacts are saved in this browser only. Use Export CSV to back them up, and open this same link on this same device/browser to see them again.</div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" id="searchBox" placeholder="Search name, company, phone, email…">
+      </div>
+      <button class="btn" id="settingsBtn">Settings</button>
+      <button class="btn" id="lockNowBtn">Lock</button>
+      <button class="btn" id="exportBtn">Export CSV</button>
+      <button class="btn" id="scanBtn">Scan business card</button>
+      <button class="btn primary" id="addBtn">+ Add contact</button>
+    </div>
+
+    <div id="listArea"></div>
+  </main>
+</div>
+
+<!-- Add/Edit modal -->
+<div class="overlay hidden" id="editOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="editTitle">Add contact</h2>
+      <button class="close-x" data-close="editOverlay">✕</button>
+    </div>
+    <form id="editForm">
+      <input type="hidden" id="f_id">
+      <div class="form-grid">
+        <div class="field"><label>Full name *</label><input type="text" id="f_name" required></div>
+        <div class="field"><label>Job title</label><input type="text" id="f_jobTitle"></div>
+        <div class="field"><label>Company</label><input type="text" id="f_company"></div>
+        <div class="field"><label>Region</label><input type="text" id="f_region" placeholder="e.g. GCC, Southeast Asia"></div>
+        <div class="field"><label>Phone</label><input type="tel" id="f_phone"></div>
+        <div class="field"><label>Email</label><input type="email" id="f_email"></div>
+        <div class="field"><label>Met at (event)</label><input type="text" id="f_event"></div>
+        <div class="field"><label>Next call date</label><input type="date" id="f_nextCallDate"></div>
+        <div class="field full"><label>What they need / interested in</label><textarea id="f_requirements"></textarea></div>
+        <div class="field full"><label>Remarks</label><textarea id="f_remarks"></textarea></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn ghost" data-close="editOverlay">Cancel</button>
+        <button type="submit" class="btn primary">Save contact</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Detail modal -->
+<div class="overlay hidden" id="detailOverlay">
+  <div class="modal">
+    <div class="detail-head">
+      <div>
+        <h2 id="d_name"></h2>
+        <div class="detail-sub" id="d_roleCompany"></div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn small" id="d_editBtn">Edit</button>
+        <button class="btn small danger-outline" id="d_deleteBtn">Delete</button>
+        <button class="close-x" data-close="detailOverlay">✕</button>
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item"><div class="l">Region</div><div class="v" id="d_region"></div></div>
+      <div class="info-item"><div class="l">Met at</div><div class="v" id="d_event"></div></div>
+      <div class="info-item"><div class="l">Phone</div><div class="v" id="d_phone"></div></div>
+      <div class="info-item"><div class="l">Email</div><div class="v" id="d_email"></div></div>
+      <div class="info-item"><div class="l">Next call</div><div class="v" id="d_nextCall"></div></div>
+      <div class="info-item"><div class="l">Added</div><div class="v" id="d_created"></div></div>
+      <div class="info-item" style="grid-column:1/-1"><div class="l">What they need</div><div class="v" id="d_requirements"></div></div>
+      <div class="info-item" style="grid-column:1/-1"><div class="l">Remarks</div><div class="v" id="d_remarks"></div></div>
+    </div>
+
+    <div class="section-title">Call log</div>
+    <div class="call-log" id="d_callLog"></div>
+    <div class="add-call-form">
+      <input type="date" id="newCallDate">
+      <textarea id="newCallNotes" placeholder="What was discussed on this call…"></textarea>
+      <button class="btn small primary" id="addCallBtn" type="button">Log call</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="overlay hidden" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Settings</h2>
+      <button class="close-x" data-close="settingsOverlay">✕</button>
+    </div>
+    <div class="field full" style="margin-bottom:14px;">
+      <label>Anthropic API key (used only for business card scanning)</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
+    </div>
+    <p style="color:var(--muted); font-size:0.82rem; line-height:1.5; margin:0 0 4px;">
+      This key is stored only in this browser and is sent directly from your device to Anthropic when you scan a card. Card scanning won't work without it. Get a key at
+      <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">console.anthropic.com</a>. Keep this page's link private since anyone with it and your key could use your API credits.
+    </p>
+    <div class="form-actions" style="margin-bottom:22px;">
+      <button type="button" class="btn ghost" data-close="settingsOverlay">Close</button>
+      <button type="button" class="btn primary" id="saveApiKeyBtn">Save key</button>
+    </div>
+    <div style="border-top:1px solid var(--line); padding-top:18px;">
+      <p style="font-size:0.85rem; margin:0 0 10px;">Change the password used to unlock this contact book.</p>
+      <button type="button" class="btn small" id="changePwBtn">Change password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scan modal -->
+<div class="overlay hidden" id="scanOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Scan business card</h2>
+      <button class="close-x" data-close="scanOverlay">✕</button>
+    </div>
+
+    <div class="event-quickset">
+      <input type="text" id="scanEvent" placeholder="Which event are you at? (applied to scanned cards)">
+    </div>
+
+    <div class="scan-drop" id="scanDrop">
+      <input type="file" id="scanFile" accept="image/*" capture="environment">
+      <div id="scanDropText">Tap to take a photo, or choose an image of a business card</div>
+      <img id="scanPreview" class="scan-preview hidden">
+    </div>
+    <div class="scan-status" id="scanStatus"></div>
+
+    <div class="form-actions">
+      <button class="btn ghost" type="button" data-close="scanOverlay">Cancel</button>
+      <button class="btn primary" id="extractBtn" type="button" disabled>Extract details</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_INDEX_KEY = 'fieldbook-client-index';
+const API_KEY_STORAGE = 'fieldbook-anthropic-key';
+
+// ---------- storage helpers (plain browser localStorage — works on any host) ----------
+async function getIndex(){
+  try{ const raw = localStorage.getItem(STORAGE_INDEX_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+async function saveIndex(arr){
+  try{ localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(arr)); }catch(e){ console.error(e); }
+}
+async function getClient(id){
+  try{ const raw = localStorage.getItem('fieldbook-client:'+id); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+async function saveClient(obj){
+  try{ localStorage.setItem('fieldbook-client:'+obj.id, JSON.stringify(obj)); }catch(e){ console.error(e); }
+}
+async function deleteClientStorage(id){
+  try{ localStorage.removeItem('fieldbook-client:'+id); }catch(e){}
+  const idx = await getIndex();
+  await saveIndex(idx.filter(x => x !== id));
+}
+
+// ---------- password lock ----------
+const PW_KEY = 'fieldbook-pwhash';
+let lockMode = 'enter';
+
+async function sha256(str){
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function initLock(){
+  const hasPw = !!localStorage.getItem(PW_KEY);
+  const label = document.getElementById('lockLabel');
+  const confirmInput = document.getElementById('lockConfirm');
+  const resetLink = document.getElementById('lockReset');
+  lockMode = hasPw ? 'enter' : 'create';
+  label.textContent = hasPw ? 'Enter your password' : 'Set a password to protect this contact book';
+  confirmInput.classList.toggle('hidden', hasPw);
+  resetLink.classList.toggle('hidden', !hasPw);
+  document.getElementById('lockInput').value = '';
+  confirmInput.value = '';
+  document.getElementById('lockError').textContent = '';
+  document.getElementById('lockOverlay').classList.remove('hidden');
+
+  document.getElementById('lockSubmit').onclick = onLockSubmit;
+  document.getElementById('lockInput').onkeydown = e => { if(e.key === 'Enter') onLockSubmit(); };
+  document.getElementById('lockReset').onclick = () => {
+    localStorage.removeItem(PW_KEY);
+    initLock();
+  };
+  document.getElementById('lockInput').focus();
+}
+
+async function onLockSubmit(){
+  const pw = document.getElementById('lockInput').value;
+  const errEl = document.getElementById('lockError');
+  if(!pw){ errEl.textContent = 'Enter a password.'; return; }
+
+  if(lockMode === 'create'){
+    const confirmVal = document.getElementById('lockConfirm').value;
+    if(pw.length < 4){ errEl.textContent = 'Use at least 4 characters.'; return; }
+    if(pw !== confirmVal){ errEl.textContent = "Passwords don't match."; return; }
+    localStorage.setItem(PW_KEY, await sha256(pw));
+    unlockApp();
+  } else {
+    const hash = await sha256(pw);
+    if(hash === localStorage.getItem(PW_KEY)){
+      unlockApp();
+    } else {
+      errEl.textContent = 'Incorrect password.';
+    }
+  }
+}
+
+function unlockApp(){
+  document.getElementById('lockOverlay').classList.add('hidden');
+  init();
+}
+
+function lockAppNow(){
+  document.getElementById('lockOverlay').classList.remove('hidden');
+  initLock();
+}
+
+function onChangePassword(){
+  localStorage.removeItem(PW_KEY);
+  closeOverlay('settingsOverlay');
+  lockAppNow();
+}
+async function loadAllClients(){
+  const idx = await getIndex();
+  const results = await Promise.all(idx.map(getClient));
+  return results.filter(Boolean);
+}
+
+// ---------- state ----------
+let allClients = [];
+let currentDetailId = null;
+let appBound = false;
+
+// ---------- init ----------
+document.addEventListener('DOMContentLoaded', initLock);
+
+async function init(){
+  allClients = await loadAllClients();
+  render();
+  if(!appBound){ bindGlobalEvents(); appBound = true; }
+}
+
+function bindGlobalEvents(){
+  document.getElementById('addBtn').addEventListener('click', () => openEditModal(null));
+  document.getElementById('scanBtn').addEventListener('click', openScanModal);
+  document.getElementById('exportBtn').addEventListener('click', exportCSV);
+  document.getElementById('searchBox').addEventListener('input', render);
+  document.getElementById('filterEvent').addEventListener('change', render);
+  document.getElementById('filterRegion').addEventListener('change', render);
+  document.getElementById('sortBy').addEventListener('change', render);
+
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click', () => closeOverlay(btn.getAttribute('data-close')));
+  });
+
+  document.getElementById('editForm').addEventListener('submit', onSaveContact);
+  document.getElementById('d_editBtn').addEventListener('click', () => openEditModal(currentDetailId));
+  document.getElementById('d_deleteBtn').addEventListener('click', onDeleteClick);
+  document.getElementById('addCallBtn').addEventListener('click', onAddCall);
+
+  document.getElementById('scanFile').addEventListener('change', onScanFileChosen);
+  document.getElementById('extractBtn').addEventListener('click', onExtractCard);
+
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
+  document.getElementById('changePwBtn').addEventListener('click', onChangePassword);
+  document.getElementById('lockNowBtn').addEventListener('click', lockAppNow);
+
+  // close overlay on backdrop click
+  document.querySelectorAll('.overlay').forEach(ov=>{
+    ov.addEventListener('click', (e)=>{ if(e.target === ov) closeOverlay(ov.id); });
+  });
+}
+
+function closeOverlay(id){ document.getElementById(id).classList.add('hidden'); }
+function openOverlay(id){ document.getElementById(id).classList.remove('hidden'); }
+
+// ---------- date helpers ----------
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  const t = new Date(todayISO() + 'T00:00:00');
+  return Math.round((d - t) / 86400000);
+}
+function formatDate(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+}
+
+// ---------- rendering ----------
+function populateFilterOptions(){
+  const eventSel = document.getElementById('filterEvent');
+  const regionSel = document.getElementById('filterRegion');
+  const prevEvent = eventSel.value, prevRegion = regionSel.value;
+
+  const events = [...new Set(allClients.map(c => (c.event||'').trim()).filter(Boolean))].sort();
+  const regions = [...new Set(allClients.map(c => (c.region||'').trim()).filter(Boolean))].sort();
+
+  eventSel.innerHTML = '<option value="">All events</option>' + events.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
+  regionSel.innerHTML = '<option value="">All regions</option>' + regions.map(r=>`<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+
+  eventSel.value = events.includes(prevEvent) ? prevEvent : '';
+  regionSel.value = regions.includes(prevRegion) ? prevRegion : '';
+}
+
+function updateStats(){
+  document.getElementById('statTotal').textContent = allClients.length;
+  let overdue = 0, week = 0;
+  allClients.forEach(c=>{
+    const d = daysUntil(c.nextCallDate);
+    if(d !== null){
+      if(d < 0) overdue++;
+      else if(d <= 7) week++;
+    }
+  });
+  document.getElementById('statOverdue').textContent = overdue;
+  document.getElementById('statWeek').textContent = week;
+}
+
+function render(){
+  populateFilterOptions();
+  updateStats();
+
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const evF = document.getElementById('filterEvent').value;
+  const regF = document.getElementById('filterRegion').value;
+  const sortBy = document.getElementById('sortBy').value;
+
+  let list = allClients.filter(c=>{
+    if(evF && c.event !== evF) return false;
+    if(regF && c.region !== regF) return false;
+    if(q){
+      const hay = [c.name,c.company,c.jobTitle,c.phone,c.email,c.region,c.event].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  list.sort((a,b)=>{
+    if(sortBy === 'name') return (a.name||'').localeCompare(b.name||'');
+    if(sortBy === 'recent') return (b.createdAt||0) - (a.createdAt||0);
+    // next call soonest, undated last
+    const da = a.nextCallDate ? new Date(a.nextCallDate).getTime() : Infinity;
+    const db = b.nextCallDate ? new Date(b.nextCallDate).getTime() : Infinity;
+    return da - db;
+  });
+
+  const area = document.getElementById('listArea');
+  if(list.length === 0){
+    area.innerHTML = `<div class="empty"><h3>No contacts yet</h3><p>Add someone manually or scan a business card to get started.</p></div>`;
+    return;
+  }
+
+  area.innerHTML = `<div class="grid">${list.map(cardHtml).join('')}</div>`;
+  area.querySelectorAll('.card').forEach(el=>{
+    el.addEventListener('click', ()=> openDetail(el.getAttribute('data-id')));
+  });
+}
+
+function callBadge(c){
+  const d = daysUntil(c.nextCallDate);
+  if(d === null) return '';
+  if(d < 0) return `<span class="badge due">Overdue ${formatDate(c.nextCallDate)}</span>`;
+  if(d <= 7) return `<span class="badge soon">Next call ${formatDate(c.nextCallDate)}</span>`;
+  return `<span class="badge later">Next call ${formatDate(c.nextCallDate)}</span>`;
+}
+
+function cardHtml(c){
+  const roleLine = [c.jobTitle, c.company].filter(Boolean).join(' · ');
+  return `
+    <div class="card" data-id="${c.id}">
+      <div class="card-top">
+        <div>
+          <h3>${escapeHtml(c.name || 'Unnamed contact')}</h3>
+          ${roleLine ? `<div class="card-role">${escapeHtml(roleLine)}</div>` : ''}
+        </div>
+      </div>
+      <div class="card-meta">
+        ${c.event ? `<span class="badge">${escapeHtml(c.event)}</span>` : ''}
+        ${c.region ? `<span class="badge">${escapeHtml(c.region)}</span>` : ''}
+        ${callBadge(c)}
+      </div>
+      <div class="card-foot">
+        <span>${(c.calls||[]).length} call${(c.calls||[]).length===1?'':'s'} logged</span>
+        <span>${c.phone ? escapeHtml(c.phone) : (c.email ? escapeHtml(c.email) : '')}</span>
+      </div>
+    </div>`;
+}
+
+function escapeHtml(str){
+  return String(str||'').replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+// ---------- add / edit ----------
+function openEditModal(id, prefill){
+  const form = document.getElementById('editForm');
+  form.reset();
+  document.getElementById('f_id').value = id || '';
+  document.getElementById('editTitle').textContent = id ? 'Edit contact' : 'Add contact';
+
+  if(id){
+    const c = allClients.find(x=>x.id===id);
+    if(c){
+      document.getElementById('f_name').value = c.name||'';
+      document.getElementById('f_jobTitle').value = c.jobTitle||'';
+      document.getElementById('f_company').value = c.company||'';
+      document.getElementById('f_region').value = c.region||'';
+      document.getElementById('f_phone').value = c.phone||'';
+      document.getElementById('f_email').value = c.email||'';
+      document.getElementById('f_event').value = c.event||'';
+      document.getElementById('f_nextCallDate').value = c.nextCallDate||'';
+      document.getElementById('f_requirements').value = c.requirements||'';
+      document.getElementById('f_remarks').value = c.remarks||'';
+    }
+  } else if(prefill){
+    Object.keys(prefill).forEach(k=>{
+      const el = document.getElementById('f_'+k);
+      if(el) el.value = prefill[k] || '';
+    });
+  }
+  closeOverlay('detailOverlay');
+  closeOverlay('scanOverlay');
+  openOverlay('editOverlay');
+}
+
+async function onSaveContact(e){
+  e.preventDefault();
+  const id = document.getElementById('f_id').value;
+  const existing = id ? allClients.find(x=>x.id===id) : null;
+
+  const obj = {
+    id: id || ('c' + Date.now() + Math.random().toString(36).slice(2,7)),
+    name: document.getElementById('f_name').value.trim(),
+    jobTitle: document.getElementById('f_jobTitle').value.trim(),
+    company: document.getElementById('f_company').value.trim(),
+    region: document.getElementById('f_region').value.trim(),
+    phone: document.getElementById('f_phone').value.trim(),
+    email: document.getElementById('f_email').value.trim(),
+    event: document.getElementById('f_event').value.trim(),
+    nextCallDate: document.getElementById('f_nextCallDate').value,
+    requirements: document.getElementById('f_requirements').value.trim(),
+    remarks: document.getElementById('f_remarks').value.trim(),
+    calls: existing ? (existing.calls||[]) : [],
+    createdAt: existing ? existing.createdAt : Date.now()
+  };
+
+  await saveClient(obj);
+  if(!existing){
+    const idx = await getIndex();
+    idx.push(obj.id);
+    await saveIndex(idx);
+  }
+  allClients = await loadAllClients();
+  closeOverlay('editOverlay');
+  render();
+}
+
+// ---------- detail ----------
+function openDetail(id){
+  const c = allClients.find(x=>x.id===id);
+  if(!c) return;
+  currentDetailId = id;
+
+  document.getElementById('d_name').textContent = c.name || 'Unnamed contact';
+  document.getElementById('d_roleCompany').textContent = [c.jobTitle, c.company].filter(Boolean).join(' at ');
+  document.getElementById('d_region').textContent = c.region || '';
+  document.getElementById('d_event').textContent = c.event || '';
+  document.getElementById('d_phone').textContent = c.phone || '';
+  document.getElementById('d_email').textContent = c.email || '';
+  document.getElementById('d_nextCall').textContent = c.nextCallDate ? formatDate(c.nextCallDate) : '';
+  document.getElementById('d_created').textContent = c.createdAt ? formatDate(new Date(c.createdAt).toISOString().slice(0,10)) : '';
+  document.getElementById('d_requirements').textContent = c.requirements || '';
+  document.getElementById('d_remarks').textContent = c.remarks || '';
+
+  const log = document.getElementById('d_callLog');
+  const calls = (c.calls||[]).slice().sort((a,b)=> new Date(b.date) - new Date(a.date));
+  log.innerHTML = calls.length
+    ? calls.map(call => `<div class="call-item"><div class="date">${formatDate(call.date)}</div><div class="notes">${escapeHtml(call.notes)}</div></div>`).join('')
+    : `<div class="no-calls">No calls logged yet.</div>`;
+
+  document.getElementById('newCallDate').value = todayISO();
+  document.getElementById('newCallNotes').value = '';
+  document.getElementById('d_deleteBtn').textContent = 'Delete';
+  document.getElementById('d_deleteBtn').dataset.armed = '';
+
+  openOverlay('detailOverlay');
+}
+
+async function onAddCall(){
+  const c = allClients.find(x=>x.id===currentDetailId);
+  if(!c) return;
+  const date = document.getElementById('newCallDate').value || todayISO();
+  const notes = document.getElementById('newCallNotes').value.trim();
+  if(!notes){ document.getElementById('newCallNotes').focus(); return; }
+  c.calls = c.calls || [];
+  c.calls.push({ date, notes });
+  await saveClient(c);
+  allClients = await loadAllClients();
+  openDetail(c.id);
+  render();
+}
+
+function onDeleteClick(){
+  const btn = document.getElementById('d_deleteBtn');
+  if(btn.dataset.armed === 'true'){
+    performDelete(currentDetailId);
+  } else {
+    btn.dataset.armed = 'true';
+    btn.textContent = 'Click again to confirm';
+    setTimeout(()=>{ btn.dataset.armed=''; btn.textContent='Delete'; }, 3000);
+  }
+}
+
+async function performDelete(id){
+  await deleteClientStorage(id);
+  allClients = await loadAllClients();
+  closeOverlay('detailOverlay');
+  render();
+}
+
+// ---------- export ----------
+function exportCSV(){
+  const headers = ['Name','Job title','Company','Region','Phone','Email','Event','Next call date','Requirements','Remarks','Call log'];
+  const rows = allClients.map(c => [
+    c.name, c.jobTitle, c.company, c.region, c.phone, c.email, c.event, c.nextCallDate, c.requirements, c.remarks,
+    (c.calls||[]).map(call => `${call.date}: ${call.notes}`).join(' | ')
+  ]);
+  const csv = [headers, ...rows].map(row =>
+    row.map(cell => `"${String(cell||'').replace(/"/g,'""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'event-contacts.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------- settings ----------
+function openSettings(){
+  document.getElementById('apiKeyInput').value = localStorage.getItem(API_KEY_STORAGE) || '';
+  openOverlay('settingsOverlay');
+}
+function saveApiKey(){
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if(val) localStorage.setItem(API_KEY_STORAGE, val);
+  else localStorage.removeItem(API_KEY_STORAGE);
+  closeOverlay('settingsOverlay');
+}
+
+// ---------- scan business card ----------
+let scanFileData = null; // { base64, mediaType }
+
+function openScanModal(){
+  document.getElementById('scanFile').value = '';
+  document.getElementById('scanPreview').classList.add('hidden');
+  document.getElementById('scanDropText').classList.remove('hidden');
+  document.getElementById('scanStatus').textContent = '';
+  document.getElementById('extractBtn').disabled = true;
+  scanFileData = null;
+  openOverlay('scanOverlay');
+}
+
+function onScanFileChosen(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    const base64 = dataUrl.split(',')[1];
+    scanFileData = { base64, mediaType: file.type || 'image/jpeg' };
+    const preview = document.getElementById('scanPreview');
+    preview.src = dataUrl;
+    preview.classList.remove('hidden');
+    document.getElementById('scanDropText').classList.add('hidden');
+    document.getElementById('extractBtn').disabled = false;
+    document.getElementById('scanStatus').textContent = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function onExtractCard(){
+  if(!scanFileData) return;
+  const statusEl = document.getElementById('scanStatus');
+  const btn = document.getElementById('extractBtn');
+
+  const apiKey = localStorage.getItem(API_KEY_STORAGE);
+  if(!apiKey){
+    statusEl.textContent = 'Add your Anthropic API key in Settings first to enable scanning.';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Reading the card…';
+
+  try{
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: scanFileData.mediaType, data: scanFileData.base64 } },
+            { type: 'text', text: 'Extract the contact details from this business card image. Respond with ONLY a raw JSON object, no markdown fences, no explanation, with exactly these keys: name, jobTitle, company, phone, email, region. "region" should be your best short guess at the country or area from any address/phone code visible, or an empty string if unclear. Use an empty string for any field not visible on the card. Do not invent information that is not on the card.' }
+          ]
+        }]
+      })
+    });
+    const data = await response.json();
+    let text = (data.content || []).map(b => b.text || '').join('').trim();
+    text = text.replace(/^```json/i, '').replace(/^```/,'').replace(/```$/,'').trim();
+    const parsed = JSON.parse(text);
+
+    statusEl.textContent = 'Details extracted — review and save below.';
+    const eventVal = document.getElementById('scanEvent').value.trim();
+    closeOverlay('scanOverlay');
+    openEditModal(null, {
+      name: parsed.name,
+      jobTitle: parsed.jobTitle,
+      company: parsed.company,
+      phone: parsed.phone,
+      email: parsed.email,
+      region: parsed.region,
+      event: eventVal
+    });
+  } catch(err){
+    console.error(err);
+    statusEl.textContent = "Couldn't read that card — check your API key in Settings, or enter the details by hand instead.";
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
